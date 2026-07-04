@@ -1,0 +1,75 @@
+{
+  "name": "pantheon",
+  "version": "0.1.0",
+  "description": "A multi-agent personal assistant suite: one orchestrator, four domain gods.",
+  "main": "./out/main/index.js",
+  "author": "you",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postinstall": "electron-builder install-app-deps",
+    "dist:win": "electron-vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^12.4.0",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/caveat": "^5.1.0",
+    "@fontsource/alegreya-sans": "^5.1.0",
+    "@fontsource/gfs-didot": "^5.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "app.pantheon",
+    "productName": "Pantheon",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Pantheon"
+    },
+    "portable": {
+      "artifactName": "Pantheon-portable.exe"
+    }
+  }
+}

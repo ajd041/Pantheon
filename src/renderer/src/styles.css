@@ -1,0 +1,484 @@
+/* ── Pantheon: a journal on a desk, Harajuku Morning on the wall ───────
+   --wall   #F6E0D9  warm tan, a peach undertone — Harajuku Morning, tanned down
+   --page   #FBF6EC  warm paper
+   --ink    #3A3144  warm dark ink
+   --soft   #8B8095  faded ink
+   --rule   #E8D9CB  ruled lines / hairlines
+   Gods: zeus purple · chronos green · hestia red · apollo gold · hermes blue
+─────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --wall: #F1E3D3;
+  --page: #FBF6EC;
+  --page-deep: #F3ECDD;
+  --ink: #3A3144;
+  --soft: #8B8095;
+  --rule: #E8D9CB;
+  --zeus: #7A5BA8;
+  --chronos: #4C7C59;
+  --hestia: #C25450;
+  --apollo: #C9921C;
+  --hermes: #46729E;
+  --display: 'GFS Didot', 'Didot', Georgia, serif;
+  --body: 'Alegreya Sans', 'Segoe UI', sans-serif;
+  --hand: 'Caveat Variable', 'Caveat', cursive;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html, body, #root { height: 100%; }
+body {
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+button {
+  font: inherit; color: var(--ink); cursor: pointer;
+  background: var(--page); border: 1px solid var(--rule); border-radius: 7px;
+  padding: 7px 14px;
+  box-shadow: 0 1px 0 rgba(58, 49, 68, 0.06);
+}
+button:hover { border-color: var(--zeus); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--zeus); color: #fff; border-color: var(--zeus); font-weight: 600; }
+button.ghost { background: transparent; border: none; box-shadow: none; font-size: 18px; color: var(--soft); }
+button.ghost:hover { color: var(--zeus); }
+button:focus-visible, textarea:focus-visible, input:focus-visible {
+  outline: 2px solid var(--zeus); outline-offset: 1px;
+}
+
+.app { display: flex; height: 100%; padding: 18px; gap: 16px; }
+
+/* ── The Agora rail: journal tabs, one per god ── */
+.agora {
+  width: 212px; flex: none;
+  display: flex; flex-direction: column; gap: 8px;
+  padding-top: 8px;
+}
+.agora-title {
+  font-family: var(--display);
+  font-size: 22px; letter-spacing: 0.3em;
+  color: var(--ink);
+  margin: 0 0 14px 6px;
+}
+.god {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px;
+  background: var(--page);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--god-c, var(--soft));
+  border-radius: 0 9px 9px 0;
+  box-shadow: 0 1px 2px rgba(58, 49, 68, 0.07);
+  transition: transform 180ms, box-shadow 180ms;
+}
+.god-zeus    { --god-c: var(--zeus); }
+.god-chronos { --god-c: var(--chronos); }
+.god-hermes  { --god-c: var(--hermes); }
+.god-apollo  { --god-c: var(--apollo); }
+.god-hestia  { --god-c: var(--hestia); }
+.god-glyph { width: 21px; height: 21px; fill: var(--god-c); opacity: 0.55; flex: none; transition: opacity 180ms; }
+.god-meta { display: flex; flex-direction: column; min-width: 0; }
+.god-name { font-family: var(--display); font-size: 16.5px; line-height: 1.2; color: var(--ink); }
+.god-domain { font-size: 11.5px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.god-active {
+  transform: translateX(5px);
+  box-shadow: 0 3px 9px rgba(58, 49, 68, 0.14);
+}
+.god-active .god-glyph { opacity: 1; animation: scribble 1.2s ease-in-out infinite; }
+.god-active .god-domain { color: var(--god-c); font-weight: 600; }
+@keyframes scribble { 50% { transform: rotate(-7deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .god, .god-active .god-glyph { animation: none; transition: none; }
+}
+
+/* ── The page (chat) ── */
+.hall {
+  flex: 1; display: flex; flex-direction: column; min-width: 0;
+  background: var(--page);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgba(58, 49, 68, 0.12);
+  overflow: hidden;
+}
+.hall-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 22px; border-bottom: 1px solid var(--rule);
+  background: var(--page-deep);
+}
+.hall-head h1 { font-family: var(--display); font-size: 21px; font-weight: 400; letter-spacing: 0.06em; }
+
+/* Ruled paper with a notebook margin line */
+.scroll {
+  flex: 1; overflow-y: auto;
+  padding: 26px 28px 26px 64px;
+  display: flex; flex-direction: column; gap: 16px;
+  background:
+    linear-gradient(to right, transparent 43px, rgba(194, 84, 80, 0.28) 43px, rgba(194, 84, 80, 0.28) 44px, transparent 44px),
+    repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(139, 128, 149, 0.13) 31px, rgba(139, 128, 149, 0.13) 32px);
+}
+
+.empty { margin: auto; text-align: center; color: var(--soft); max-width: 400px; }
+.empty-display { font-family: var(--display); font-size: 30px; color: var(--ink); margin-bottom: 8px; }
+.empty p:last-child { font-family: var(--hand); font-size: 20px; }
+
+.msg { max-width: 64ch; white-space: pre-wrap; }
+.msg-user {
+  align-self: flex-end;
+  font-family: var(--hand); font-size: 20px; line-height: 1.45;
+  color: #4a3f5e;
+  padding: 4px 10px;
+}
+.msg-assistant {
+  align-self: flex-start;
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--zeus);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(58, 49, 68, 0.08);
+}
+.msg-pending { color: var(--soft); font-style: italic; background: transparent; border: none; box-shadow: none; }
+.msg-gods { margin-top: 9px; display: flex; gap: 6px; flex-wrap: wrap; }
+.god-chip {
+  font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px;
+  color: #fff; background: var(--chip-c, var(--soft));
+}
+.chip-zeus    { --chip-c: var(--zeus); }
+.chip-chronos { --chip-c: var(--chronos); }
+.chip-hermes  { --chip-c: var(--hermes); }
+.chip-apollo  { --chip-c: var(--apollo); }
+.chip-hestia  { --chip-c: var(--hestia); }
+
+/* ── Composer: the pen line ── */
+.composer {
+  display: flex; gap: 10px; align-items: flex-end;
+  padding: 14px 22px 18px; border-top: 1px solid var(--rule);
+  background: var(--page-deep);
+}
+.composer textarea {
+  flex: 1; resize: none; color: var(--ink);
+  font-family: var(--hand); font-size: 20px; line-height: 1.4;
+  background: transparent;
+  border: none; border-bottom: 2px solid var(--rule);
+  border-radius: 0;
+  padding: 6px 4px; min-height: 40px;
+}
+.composer textarea::placeholder { color: var(--soft); }
+.composer textarea:focus-visible { outline: none; border-bottom-color: var(--zeus); }
+
+/* ── Settings modal ── */
+.modal-veil {
+  position: fixed; inset: 0; background: rgba(58, 49, 68, 0.4);
+  display: grid; place-items: center;
+}
+.modal {
+  width: min(520px, 92vw); max-height: 86vh; overflow-y: auto;
+  background: var(--page); border: 1px solid var(--rule); border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(58, 49, 68, 0.25);
+  padding: 24px;
+}
+.modal h2 { font-family: var(--display); font-weight: 400; margin-bottom: 14px; }
+.modal label { display: block; margin-bottom: 12px; font-size: 13px; color: var(--soft); }
+.modal input {
+  display: block; width: 100%; margin-top: 4px;
+  font: inherit; font-size: 14px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px;
+  padding: 8px 11px;
+}
+.modal fieldset { border: 1px solid var(--rule); border-radius: 8px; padding: 12px; margin: 14px 0; }
+.modal legend { padding: 0 6px; font-size: 13px; color: var(--soft); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row input { flex: 1; }
+.modal-actions { justify-content: flex-end; margin-top: 16px; }
+.note { color: var(--zeus); font-size: 13px; margin-top: 8px; }
+
+/* ── Chronos board ───────────────────────────────────────────────────── */
+.god { text-align: left; width: 100%; }
+.god-current { background: #fffdf8; border-color: var(--god-c); }
+
+.hall-board { padding: 0; }
+.chronos { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.chronos-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 13px 20px; border-bottom: 1px solid var(--rule); background: var(--page-deep);
+}
+.chronos-head h1 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--chronos); }
+.chronos-date { font-size: 13px; color: var(--soft); margin-left: 10px; }
+.ritual { border-color: var(--chronos); color: var(--chronos); font-weight: 500; }
+.ritual:hover { background: var(--chronos); color: #fff; }
+.seg { padding: 6px 12px; }
+.seg-on { background: var(--chronos); color: #fff; border-color: var(--chronos); }
+.cal-note { padding: 7px 20px; font-size: 12.5px; color: var(--hestia); background: #fdf3ef; border-bottom: 1px solid var(--rule); }
+
+.chronos-body { flex: 1; display: flex; min-height: 0; }
+
+/* Day timeline */
+.timeline-wrap { flex: 1; overflow-y: auto; padding: 14px 18px 14px 8px; }
+.timeline { position: relative; margin-left: 52px; border-left: 1px solid var(--rule); }
+.slot { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(139, 128, 149, 0.13); }
+.slot-time {
+  position: absolute; left: -52px; top: -8px; width: 44px;
+  font-size: 11px; color: var(--soft); text-align: right;
+}
+.block {
+  position: absolute; left: 8px; right: 8px; overflow: hidden;
+  border-radius: 0 8px 8px 0; padding: 4px 10px; font-size: 12.5px; line-height: 1.35;
+}
+.block-event {
+  background: rgba(122, 91, 168, 0.10); border-left: 3px solid var(--zeus);
+  color: var(--ink); right: 46%;
+}
+.block-task {
+  background: rgba(76, 124, 89, 0.12); border-left: 3px solid var(--chronos);
+  color: var(--ink); left: 46%; cursor: grab;
+}
+.block-task:active { cursor: grabbing; }
+.block-title { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.block-sub { color: var(--soft); font-size: 11px; }
+.block-actions { position: absolute; top: 3px; right: 5px; display: none; gap: 3px; }
+.block-task:hover .block-actions { display: flex; }
+.mini {
+  padding: 0 6px; font-size: 11px; line-height: 18px; border-radius: 5px;
+  background: #fffdf8;
+}
+
+/* Week view */
+.week { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 14px 18px; overflow-y: auto; }
+.week-col { min-width: 0; }
+.week-day {
+  width: 100%; font-family: var(--display); font-size: 14px;
+  margin-bottom: 7px; padding: 5px;
+}
+.week-chip {
+  font-size: 11px; line-height: 1.3; margin-bottom: 4px; padding: 4px 7px;
+  background: rgba(76, 124, 89, 0.12); border-left: 2px solid var(--chronos); border-radius: 0 5px 5px 0;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.week-chip span { color: var(--soft); }
+.week-chip-event { background: rgba(122, 91, 168, 0.10); border-left-color: var(--zeus); }
+
+/* Backlog */
+.backlog {
+  width: 264px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--rule); background: var(--page-deep); padding: 14px;
+}
+.backlog h2, .done-today h2 { font-family: var(--display); font-size: 16px; font-weight: 400; margin-bottom: 9px; }
+.backlog-add { margin-bottom: 11px; }
+.backlog-add input {
+  flex: 1; min-width: 0; font: inherit; font-size: 13px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px;
+}
+.backlog-add select {
+  font: inherit; font-size: 13px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px; padding: 6px 4px;
+}
+.backlog-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.task-card {
+  background: var(--page); border: 1px solid var(--rule); border-left: 3px solid var(--chronos);
+  border-radius: 0 8px 8px 0; padding: 8px 10px; cursor: grab;
+}
+.task-card:active { cursor: grabbing; }
+.task-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.task-title { font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-sub { font-size: 11.5px; color: var(--soft); margin-top: 2px; }
+.quad {
+  flex: none; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; border: none; color: #fff;
+}
+.q1 { background: var(--hestia); }
+.q2 { background: var(--chronos); }
+.q3 { background: var(--hermes); }
+.q4 { background: var(--soft); }
+.backlog-empty { font-size: 12.5px; color: var(--soft); font-style: italic; }
+.done-today { margin-top: 12px; border-top: 1px solid var(--rule); padding-top: 10px; }
+.done-item { font-size: 12.5px; color: var(--chronos); padding: 2px 0; }
+
+/* Stopwatch bar */
+.stopwatch {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 20px; border-top: 1px solid var(--rule); background: var(--page-deep);
+}
+.sw-title { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-time { font-variant-numeric: tabular-nums; font-size: 18px; color: var(--chronos); margin-left: auto; }
+.sw-expected { font-size: 12px; color: var(--soft); }
+.stopwatch-over { background: #fdf3ef; }
+.stopwatch-over .sw-time { color: var(--hestia); }
+
+/* ── Chronos chat strip ── */
+.chronos-chat { border-bottom: 1px solid var(--rule); background: rgba(76, 124, 89, 0.05); }
+.cchat-log {
+  max-height: 168px; overflow-y: auto;
+  padding: 10px 20px 4px; display: flex; flex-direction: column; gap: 7px;
+}
+.cchat-hint { font-size: 12.5px; color: var(--soft); font-style: italic; }
+.cchat-msg { max-width: 70ch; white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; }
+.cchat-user {
+  align-self: flex-end; font-family: var(--hand); font-size: 18px; line-height: 1.35; color: #4a3f5e;
+}
+.cchat-assistant {
+  align-self: flex-start; background: rgba(255, 253, 248, 0.92);
+  border: 1px solid var(--rule); border-left: 3px solid var(--chronos);
+  border-radius: 0 8px 8px 0; padding: 7px 12px;
+}
+.cchat-pending { color: var(--soft); font-style: italic; background: transparent; border: none; }
+.cchat-input { padding: 8px 20px 12px; }
+.cchat-input input {
+  flex: 1; font-family: var(--hand); font-size: 18px; color: var(--ink);
+  background: transparent; border: none; border-bottom: 2px solid var(--rule); padding: 4px 2px;
+}
+.cchat-input input:focus-visible { outline: none; border-bottom-color: var(--chronos); }
+
+/* ── Task list upgrades ── */
+.backlog { width: 296px; }
+.cat-filter { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.cat-chip {
+  font-size: 11px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--page); color: var(--soft);
+}
+.cat-on { background: var(--chronos); border-color: var(--chronos); color: #fff; }
+.task-scheduled { border-left-color: var(--zeus); }
+.task-top { cursor: pointer; }
+.task-edit { margin-top: 8px; border-top: 1px dashed var(--rule); padding-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+.task-edit input, .task-edit select {
+  font: inherit; font-size: 12.5px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px;
+  min-width: 0;
+}
+.task-edit input { flex: 1; }
+.task-edit-row { flex-wrap: wrap; }
+.task-edit button { font-size: 12px; padding: 5px 10px; }
+.danger { border-color: var(--hestia); color: var(--hestia); }
+.danger:hover { background: var(--hestia); color: #fff; }
+.checklist { display: flex; flex-direction: column; gap: 4px; }
+.check { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); }
+.check input { accent-color: var(--chronos); }
+.check span { flex: 1; min-width: 0; }
+.check .mini { visibility: hidden; }
+.check:hover .mini { visibility: visible; }
+.check-done span { text-decoration: line-through; color: var(--soft); }
+
+/* ── Kanban board ── */
+.agenda { width: 312px; flex: none; overflow-y: auto; padding: 12px 14px 12px 6px; border-right: 1px solid var(--rule); }
+.kanban { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 12px 16px; }
+.kanban-tools { margin-bottom: 10px; }
+.kanban-cols {
+  flex: 1; display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 12px; min-height: 0; overflow-x: auto;
+}
+.kcol { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.kcol h2 {
+  font-family: var(--display); font-size: 15.5px; font-weight: 400;
+  display: flex; align-items: center; gap: 7px;
+  padding-bottom: 6px; border-bottom: 2px solid var(--chronos); margin-bottom: 9px;
+}
+.kcol-done h2 { border-bottom-color: var(--zeus); }
+.kcount {
+  font-family: var(--body); font-size: 11px; color: var(--soft);
+  background: var(--page); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px;
+}
+.archive-link {
+  margin-left: auto; border: none; background: none; box-shadow: none;
+  font-size: 11.5px; color: var(--soft); text-decoration: underline; padding: 0;
+}
+.archive-link:hover { color: var(--zeus); }
+.kcol-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding-bottom: 8px; }
+.kempty { font-size: 12px; color: var(--soft); font-style: italic; padding: 6px 2px; }
+.klater {
+  font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft);
+  border-top: 1px dashed var(--rule); padding-top: 7px; margin-top: 5px;
+}
+.check-btn { border: 1px solid var(--rule); color: var(--soft); border-radius: 999px; flex: none; }
+.check-btn:hover { background: var(--chronos); border-color: var(--chronos); color: #fff; }
+.task-done-card { border-left-color: var(--zeus); opacity: 0.82; }
+.archive-row {
+  display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+  padding: 7px 2px; border-bottom: 1px solid var(--rule); font-size: 13.5px;
+}
+
+/* ── Ink & marginalia: Zeus writes, he doesn't bubble ── */
+.msg-assistant {
+  position: relative;
+  background: transparent; border: none; border-left: none;
+  border-radius: 0; padding: 2px 0 2px 2px; box-shadow: none;
+  max-width: 62ch;
+}
+.marginalia {
+  position: absolute; left: -34px; top: 2px;
+  width: 17px; height: 17px; fill: var(--zeus); opacity: 0.85;
+}
+.ink-word {
+  opacity: 0;
+  animation: inkin 0.34s ease forwards;
+}
+@keyframes inkin {
+  from { opacity: 0; filter: blur(1.5px); transform: translateY(1px); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+.msg-scribe { min-height: 20px; }
+.scribe-line { width: 110px; height: 15px; margin-top: 4px; }
+.scribe-line path {
+  stroke: var(--soft); stroke-width: 2; stroke-linecap: round;
+  stroke-dasharray: 175; stroke-dashoffset: 175;
+  animation: scribe 1.7s ease-in-out infinite;
+}
+@keyframes scribe {
+  0% { stroke-dashoffset: 175; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ink-word { animation-duration: 0.01s; animation-delay: 0s !important; }
+  .scribe-line path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* God chips as tilted ink stamps */
+.god-chip {
+  background: transparent; color: var(--chip-c, var(--soft));
+  border: 1.5px solid var(--chip-c, var(--soft)); border-radius: 4px;
+  transform: rotate(-1.4deg);
+}
+.god-chip:nth-child(even) { transform: rotate(1.1deg); }
+
+/* Chronos strip: same ink treatment in green */
+.cchat-assistant {
+  background: transparent; border: none; border-radius: 0;
+  padding: 2px 0 2px 14px; position: relative;
+}
+.cchat-assistant::before {
+  content: ''; position: absolute; left: 1px; top: 5px; bottom: 5px; width: 3px;
+  background: var(--chronos); opacity: 0.65; border-radius: 3px; transform: rotate(1.6deg);
+}
+
+/* ── Post-it task cards on a cork-flecked board ── */
+.kanban-cols {
+  background-image: radial-gradient(rgba(150, 110, 70, 0.07) 1px, transparent 1.4px);
+  background-size: 15px 15px;
+  border-radius: 10px; padding: 10px 8px 4px;
+}
+.task-card {
+  background: var(--sticky, #FBF0C9);
+  border: none; border-left: none; border-radius: 2px;
+  padding: 13px 11px 8px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(58, 49, 68, 0.16), 0 12px 14px -12px rgba(58, 49, 68, 0.3);
+}
+.task-card::before {
+  content: ''; position: absolute; top: -5px; left: 50%; margin-left: -5px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ecd28a, #8a6b1f);
+  box-shadow: 0 2px 2px rgba(40, 30, 20, 0.3);
+}
+.task-card:hover { box-shadow: 0 3px 6px rgba(58, 49, 68, 0.2), 0 16px 18px -12px rgba(58, 49, 68, 0.34); }
+.task-title {
+  font-family: var(--hand); font-size: 18px; font-weight: 600; line-height: 1.15;
+  white-space: normal; overflow: visible; text-overflow: unset;
+}
+.task-scheduled { border-left: none; }
+.task-done-card { opacity: 0.78; }
+.task-done-card::before { background: radial-gradient(circle at 35% 30%, #c5b3df, #5d4485); }
+.task-edit { border-top-color: rgba(58, 49, 68, 0.2); }
+.task-edit input, .task-edit select { background: rgba(255, 255, 255, 0.65); }
+.kempty, .klater { color: #8a7a68; }

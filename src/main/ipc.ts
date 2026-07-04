@@ -1,12 +1,21 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { Orchestrator } from './agents/orchestrator'
-import { ChronosChat } from './agents/chronosChat'
+import { GodChat } from './agents/godChat'
+import { CHRONOS_PROMPT, chronosTools } from './agents/chronos'
+import { APOLLO_PROMPT, apolloTools, vaultPath } from './agents/apollo'
+import { HERMES_PROMPT, hermesTools, computeStreak } from './agents/hermes'
+import { HESTIA_PROMPT, hestiaTools } from './agents/hestia'
+import * as vault from './integrations/obsidian'
 import { loadSettings, saveSettings } from './settings'
 import { getDb } from './db'
 import * as gcal from './integrations/googleCalendar'
+import { usageSummary } from './usage'
 
 let orchestrator: Orchestrator | null = null
-let chronosChat: ChronosChat | null = null
+let chronosChat: GodChat | null = null
+let apolloChat: GodChat | null = null
+let hermesChat: GodChat | null = null
+let hestiaChat: GodChat | null = null
 
 export function registerIpc(win: BrowserWindow): void {
   const emitActivity = (e: unknown) => win.webContents.send('pantheon:activity', e)
@@ -34,6 +43,9 @@ export function registerIpc(win: BrowserWindow): void {
     saveSettings(next)
     orchestrator = null // rebuild with fresh settings next message
     chronosChat = null
+    apolloChat = null
+    hermesChat = null
+    hestiaChat = null
     return { ok: true }
   })
 
@@ -75,8 +87,123 @@ export function registerIpc(win: BrowserWindow): void {
   })
 
   ipcMain.handle('chronos:chat', async (_evt, message: string) => {
-    if (!chronosChat) chronosChat = new ChronosChat(emitActivity)
+    if (!chronosChat) chronosChat = new GodChat('chronos', CHRONOS_PROMPT, chronosTools, emitActivity)
     return chronosChat.send(message)
+  })
+
+  ipcMain.handle('hermes:chat', async (_evt, message: string) => {
+    if (!hermesChat) hermesChat = new GodChat('hermes', HERMES_PROMPT, hermesTools, emitActivity)
+    return hermesChat.send(message)
+  })
+
+  ipcMain.handle('hermes:chatHistory', () => {
+    return getDb().prepare(
+      "SELECT role, content FROM messages WHERE channel = 'hermes' ORDER BY id ASC LIMIT 100"
+    ).all()
+  })
+
+  ipcMain.handle('hermes:overview', () => {
+    const db = getDb()
+    const today = new Date().toISOString().slice(0, 10)
+    const weekAgo = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+    const habits = (db.prepare(
+      'SELECT id, name, cadence, target_per_week, minutes_per_session, why FROM habits WHERE archived = 0'
+    ).all() as any[]).map((h) => {
+      const { streak, dates } = computeStreak(db, h.id)
+      const last7: string[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10)
+        if (dates.has(d)) last7.push(d)
+      }
+      return { ...h, streak, week_count: [...dates].filter((d) => d >= weekAgo).length, logged_today: dates.has(today), last7 }
+    })
+    const goals = db.prepare(
+      `SELECT g.id, g.title, g.why, g.target_amount, g.unit, g.status, g.target_date,
+              COALESCE((SELECT SUM(amount) FROM goal_logs WHERE goal_id = g.id), 0) AS progress_total
+       FROM goals g WHERE g.status = 'active' ORDER BY g.created_at`
+    ).all()
+    return { habits, goals }
+  })
+
+  ipcMain.handle('hermes:logHabit', (_evt, habitId: number) => {
+    getDb().prepare(
+      'INSERT OR IGNORE INTO habit_logs (habit_id, logged_on) VALUES (?, ?)'
+    ).run(habitId, new Date().toISOString().slice(0, 10))
+    return { ok: true }
+  })
+
+  ipcMain.handle('hermes:logGoal', (_evt, goalId: number, amount: number, note: string) => {
+    getDb().prepare('INSERT INTO goal_logs (goal_id, amount, note) VALUES (?, ?, ?)').run(goalId, amount, note ?? '')
+    return { ok: true }
+  })
+
+  ipcMain.handle('hestia:chat', async (_evt, message: string) => {
+    if (!hestiaChat) hestiaChat = new GodChat('hestia', HESTIA_PROMPT, hestiaTools, emitActivity)
+    return hestiaChat.send(message)
+  })
+
+  ipcMain.handle('hestia:chatHistory', () => {
+    return getDb().prepare(
+      "SELECT role, content FROM messages WHERE channel = 'hestia' ORDER BY id ASC LIMIT 100"
+    ).all()
+  })
+
+  ipcMain.handle('hestia:overview', () => {
+    const db = getDb()
+    const meals = db.prepare(
+      `SELECT id, eaten_at, description, calories, protein_g, carbs_g, fat_g, estimated
+       FROM meals WHERE date(eaten_at, 'localtime') = date('now', 'localtime') ORDER BY eaten_at`
+    ).all() as any[]
+    const totals = {
+      calories: meals.reduce((a, m) => a + (m.calories ?? 0), 0),
+      protein_g: meals.reduce((a, m) => a + (m.protein_g ?? 0), 0),
+      carbs_g: meals.reduce((a, m) => a + (m.carbs_g ?? 0), 0),
+      fat_g: meals.reduce((a, m) => a + (m.fat_g ?? 0), 0),
+      any_estimated: meals.some((m) => m.estimated)
+    }
+    const targets = db.prepare('SELECT calories, protein_g, carbs_g, fat_g FROM hestia_targets WHERE id = 1').get() ?? null
+    const workouts = db.prepare(
+      `SELECT id, done_at, description, duration_min, intensity
+       FROM workouts WHERE date(done_at, 'localtime') = date('now', 'localtime') ORDER BY done_at`
+    ).all()
+    const energy = db.prepare(
+      `SELECT energy, mood, logged_at FROM energy_logs
+       WHERE date(logged_at, 'localtime') = date('now', 'localtime') ORDER BY logged_at DESC LIMIT 1`
+    ).get() ?? null
+    return { meals, totals, targets, workouts, energy }
+  })
+
+  ipcMain.handle('hestia:logEnergy', (_evt, level: number) => {
+    getDb().prepare('INSERT INTO energy_logs (energy) VALUES (?)').run(level)
+    return { ok: true }
+  })
+
+  ipcMain.handle('apollo:chat', async (_evt, message: string) => {
+    if (!apolloChat) apolloChat = new GodChat('apollo', APOLLO_PROMPT, apolloTools, emitActivity)
+    return apolloChat.send(message)
+  })
+
+  ipcMain.handle('apollo:chatHistory', () => {
+    return getDb().prepare(
+      "SELECT role, content FROM messages WHERE channel = 'apollo' ORDER BY id ASC LIMIT 100"
+    ).all()
+  })
+
+  ipcMain.handle('apollo:listNotes', () => {
+    try {
+      const root = vaultPath()
+      return { notes: vault.listNotes(root), root }
+    } catch (e: any) {
+      return { notes: [], root: '', error: e?.message ?? String(e) }
+    }
+  })
+
+  ipcMain.handle('apollo:readNote', (_evt, rel: string) => {
+    try {
+      return { content: vault.readNote(vaultPath(), rel) }
+    } catch (e: any) {
+      return { content: '', error: e?.message ?? String(e) }
+    }
   })
 
   ipcMain.handle('chronos:chatHistory', () => {
@@ -131,6 +258,8 @@ export function registerIpc(win: BrowserWindow): void {
       return { events: [], error: e?.message ?? String(e) }
     }
   })
+
+  ipcMain.handle('usage:summary', () => usageSummary())
 
   ipcMain.handle('google:status', () => ({ connected: gcal.isConnected() }))
 

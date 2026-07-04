@@ -5,9 +5,9 @@ A desktop assistant suite with one voice and four minds. **Zeus** is the orchest
 | God | Domain | Backing store |
 |---|---|---|
 | **Chronos** | Calendar & tasks — nothing falls through the cracks | Google Calendar + local SQLite tasks |
-| **Hermes** | Habits, streaks, and gentle coaching | SQLite |
-| **Apollo** | Knowledge capture & recall | Your Obsidian vault (plain markdown) |
-| **Hestia** | Meals, workouts, energy & mood | SQLite |
+| **Hermes** | Habit coaching, long-term goals & accountability | SQLite (habits, streaks, goal progress) |
+| **Apollo** | Knowledge, journaling & the thought dump | Built-in markdown library (or your Obsidian vault) |
+| **Hestia** | Frictionless meal/macro tracking, workouts, energy | SQLite (meals with estimated macros, targets, workouts, energy) |
 
 Built with Electron, TypeScript, React, `better-sqlite3`, the Anthropic SDK, and `googleapis`.
 
@@ -47,7 +47,7 @@ npm run dev
 Then open Settings (gear, top right):
 
 1. **Anthropic API key** — create one at https://console.anthropic.com. Pantheon defaults to `claude-sonnet-4-6`; change the model string if you prefer.
-2. **Obsidian vault** — point at your vault folder (it's just markdown; any folder works). Apollo defaults new captures into `Inbox/`.
+2. **Library** — works out of the box; notes live as plain markdown in Pantheon's app data. Optionally point at an Obsidian vault folder instead. Apollo files captures into `Inbox/` and journal entries into `Journal/`. His signature ritual is the end-of-day **thought dump**: spill freely, he files a dated journal entry in your own words and conservatively surfaces genuinely actionable items into Chronos's backlog for tomorrow.
 3. **Google Calendar** — needs a one-time Google Cloud setup:
    - Create a project at https://console.cloud.google.com, enable the **Google Calendar API**.
    - Configure the OAuth consent screen (External, add yourself as a test user).

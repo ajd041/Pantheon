@@ -4,13 +4,10 @@ import Message from './components/Message'
 import Composer from './components/Composer'
 import SettingsModal from './components/SettingsModal'
 import ChronosPage from './components/ChronosPage'
+import ApolloPage from './components/ApolloPage'
+import HermesPage from './components/HermesPage'
+import HestiaPage from './components/HestiaPage'
 import { api, ChatMessage, GodName } from './lib/ipc'
-
-const PLACEHOLDER: Partial<Record<GodName, string>> = {
-  hermes: 'Hermes is sharpening his habit tools — his page arrives in a coming version. Talk habits with him through Zeus meanwhile.',
-  apollo: 'Apollo is still arranging his library — his page arrives in a coming version. Ask Zeus to capture or find anything in the vault.',
-  hestia: 'Hestia is tending the fire — her page arrives in a coming version. Log meals, workouts, and energy through Zeus.'
-}
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -97,14 +94,21 @@ export default function App() {
         </main>
       )}
 
-      {(view === 'hermes' || view === 'apollo' || view === 'hestia') && (
-        <main className="hall">
-          <div className="scroll">
-            <div className="empty">
-              <p className="empty-display">Not yet.</p>
-              <p>{PLACEHOLDER[view]}</p>
-            </div>
-          </div>
+      {view === 'hermes' && (
+        <main className="hall hall-board">
+          <HermesPage />
+        </main>
+      )}
+
+      {view === 'apollo' && (
+        <main className="hall hall-board">
+          <ApolloPage />
+        </main>
+      )}
+
+      {view === 'hestia' && (
+        <main className="hall hall-board">
+          <HestiaPage />
         </main>
       )}
 

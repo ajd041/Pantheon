@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { api, Settings } from '../lib/ipc'
+import { api, Settings, UsageBucket } from '../lib/ipc'
 
 export default function SettingsModal(props: { onClose: () => void }) {
   const [s, setS] = useState<Settings | null>(null)
   const [gConnected, setGConnected] = useState(false)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [usage, setUsage] = useState<{ today: UsageBucket; month: UsageBucket } | null>(null)
 
   useEffect(() => {
     api().getSettings().then(setS)
     api().googleStatus().then((r) => setGConnected(r.connected))
+    api().usageSummary().then(setUsage)
   }, [])
 
   if (!s) return null
@@ -45,9 +47,9 @@ export default function SettingsModal(props: { onClose: () => void }) {
         <label>Anthropic API key<input value={s.anthropicApiKey} onChange={set('anthropicApiKey')} placeholder="sk-ant-…" type="password" /></label>
         <label>Model<input value={s.model} onChange={set('model')} /></label>
 
-        <label>Obsidian vault
+        <label>Library folder (optional — defaults to Pantheon's own library; point at an Obsidian vault to use that instead)
           <div className="row">
-            <input value={s.vaultPath} onChange={set('vaultPath')} placeholder="/path/to/vault" />
+            <input value={s.vaultPath} onChange={set('vaultPath')} placeholder="Leave empty for built-in library" />
             <button onClick={async () => { const p = await api().pickVault(); if (p) setS({ ...s, vaultPath: p }) }}>Choose folder</button>
           </div>
         </label>
@@ -60,6 +62,18 @@ export default function SettingsModal(props: { onClose: () => void }) {
             {gConnected ? 'Reconnect' : 'Connect Google Calendar'}
           </button>
         </fieldset>
+
+        {usage && (
+          <fieldset>
+            <legend>API usage (estimated)</legend>
+            <p className="usage-line">
+              Today: {usage.today.calls} calls · ~${usage.today.est_cost.toFixed(2)}
+              <br />
+              This month: {usage.month.calls} calls · ~${usage.month.est_cost.toFixed(2)}
+            </p>
+            <p className="usage-fine">Estimates from token counts at list prices — the Anthropic Console's usage page is the source of truth.</p>
+          </fieldset>
+        )}
 
         {note && <p className="note">{note}</p>}
         <div className="row modal-actions">

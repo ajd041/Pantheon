@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AgentTool, ActivityListener, GodName } from './types'
+import { recordUsage } from '../usage'
 
 const MAX_TURNS = 8
 
@@ -33,6 +34,7 @@ export class SubAgent {
         tools: toolDefs,
         messages
       })
+      recordUsage(this.model, this.god, response.usage)
 
       if (response.stop_reason !== 'tool_use') {
         const text = response.content

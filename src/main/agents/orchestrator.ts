@@ -7,6 +7,7 @@ import { APOLLO_PROMPT, apolloTools } from './apollo'
 import { HESTIA_PROMPT, hestiaTools } from './hestia'
 import { loadSettings } from '../settings'
 import { getDb } from '../db'
+import { recordUsage } from '../usage'
 
 const MAX_TURNS = 10
 const HISTORY_LIMIT = 30
@@ -127,6 +128,7 @@ export class Orchestrator {
         tools,
         messages: this.history
       })
+      recordUsage(model, 'zeus', response.usage)
 
       if (response.stop_reason !== 'tool_use') {
         finalText = response.content

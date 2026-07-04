@@ -30,8 +30,29 @@ CREATE TABLE IF NOT EXISTS habits (
   cadence TEXT DEFAULT 'daily',  -- daily | weekly | custom note
   target_per_week INTEGER DEFAULT 7,
   why TEXT DEFAULT '',           -- the user's stated motivation; Hermes coaches with it
+  minutes_per_session INTEGER DEFAULT 30,
   created_at TEXT DEFAULT (datetime('now')),
   archived INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  why TEXT DEFAULT '',
+  target_amount REAL,               -- e.g. 100000
+  unit TEXT DEFAULT '',             -- e.g. 'words', 'miles', 'chapters'
+  target_date TEXT,
+  hours_per_week REAL,
+  status TEXT DEFAULT 'active',     -- active | done | paused
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS goal_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  goal_id INTEGER NOT NULL REFERENCES goals(id),
+  amount REAL DEFAULT 0,
+  note TEXT DEFAULT '',
+  logged_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS habit_logs (
@@ -47,7 +68,20 @@ CREATE TABLE IF NOT EXISTS meals (
   eaten_at TEXT DEFAULT (datetime('now')),
   description TEXT NOT NULL,
   calories INTEGER,              -- optional, user-supplied or estimated
+  protein_g REAL,
+  carbs_g REAL,
+  fat_g REAL,
+  estimated INTEGER DEFAULT 0,   -- 1 when numbers are Hestia's estimate, not user-supplied
   tags TEXT DEFAULT ''           -- comma-separated, e.g. "breakfast,high-protein"
+);
+
+CREATE TABLE IF NOT EXISTS hestia_targets (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  calories INTEGER,
+  protein_g REAL,
+  carbs_g REAL,
+  fat_g REAL,
+  updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS workouts (
@@ -72,5 +106,14 @@ CREATE TABLE IF NOT EXISTS messages (
   content TEXT NOT NULL,
   agents TEXT DEFAULT '',        -- comma-separated gods consulted for this reply
   channel TEXT DEFAULT 'zeus',   -- 'zeus' = main journal, 'chronos' = board chat
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS api_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model TEXT NOT NULL,
+  god TEXT DEFAULT '',
+  input_tokens INTEGER DEFAULT 0,
+  output_tokens INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );

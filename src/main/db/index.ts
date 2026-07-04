@@ -19,7 +19,12 @@ export function getDb(): Database.Database {
     "ALTER TABLE tasks ADD COLUMN actual_minutes INTEGER DEFAULT 0",
     "ALTER TABLE tasks ADD COLUMN scheduled_start TEXT",
     "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'personal'",
-    "ALTER TABLE messages ADD COLUMN channel TEXT DEFAULT 'zeus'"
+    "ALTER TABLE messages ADD COLUMN channel TEXT DEFAULT 'zeus'",
+    "ALTER TABLE habits ADD COLUMN minutes_per_session INTEGER DEFAULT 30",
+    "ALTER TABLE meals ADD COLUMN protein_g REAL",
+    "ALTER TABLE meals ADD COLUMN carbs_g REAL",
+    "ALTER TABLE meals ADD COLUMN fat_g REAL",
+    "ALTER TABLE meals ADD COLUMN estimated INTEGER DEFAULT 0"
   ]) {
     try { db.exec(m) } catch { /* column already exists */ }
   }

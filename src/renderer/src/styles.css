@@ -482,3 +482,148 @@ button:focus-visible, textarea:focus-visible, input:focus-visible {
 .task-edit { border-top-color: rgba(58, 49, 68, 0.2); }
 .task-edit input, .task-edit select { background: rgba(255, 255, 255, 0.65); }
 .kempty, .klater { color: #8a7a68; }
+
+/* ── Apollo: the library ── */
+.apollo { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.apollo-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 13px 20px; border-bottom: 1px solid var(--rule); background: var(--page-deep);
+}
+.apollo-head h1 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--apollo); }
+.ritual-apollo { border-color: var(--apollo); color: var(--apollo); }
+.ritual-apollo:hover { background: var(--apollo); color: #fff; }
+.apollo-body { flex: 1; display: flex; min-height: 0; }
+.apollo-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.apollo-scroll { background:
+  linear-gradient(to right, transparent 43px, rgba(201, 146, 28, 0.30) 43px, rgba(201, 146, 28, 0.30) 44px, transparent 44px),
+  repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(139, 128, 149, 0.13) 31px, rgba(139, 128, 149, 0.13) 32px);
+}
+.marginalia-apollo { fill: var(--apollo); }
+
+.library {
+  width: 250px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--rule); background: var(--page-deep); padding: 14px;
+}
+.library h2 { font-family: var(--display); font-size: 16px; font-weight: 400; margin-bottom: 9px; }
+.lib-search {
+  font: inherit; font-size: 13px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px;
+  padding: 6px 9px; margin-bottom: 10px;
+}
+.lib-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.lib-note {
+  text-align: left; background: transparent; border: none; box-shadow: none;
+  padding: 5px 7px; border-radius: 6px; font-size: 13px; color: var(--ink);
+  border-left: 3px solid var(--apollo); border-radius: 0 6px 6px 0;
+}
+.lib-note:hover { background: rgba(201, 146, 28, 0.10); }
+.lib-note-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-reader { width: min(640px, 94vw); }
+.reader-body {
+  font: inherit; font-size: 14px; line-height: 1.65; color: var(--ink);
+  white-space: pre-wrap; word-break: break-word;
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px;
+}
+
+/* ── Hermes: the ledger ── */
+.hermes { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.hermes-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 13px 20px; border-bottom: 1px solid var(--rule); background: var(--page-deep);
+}
+.hermes-head h1 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--hermes); }
+.ritual-hermes { border-color: var(--hermes); color: var(--hermes); }
+.ritual-hermes:hover { background: var(--hermes); color: #fff; }
+.hermes-body { flex: 1; display: flex; min-height: 0; }
+.hermes-scroll { background:
+  linear-gradient(to right, transparent 43px, rgba(70, 114, 158, 0.30) 43px, rgba(70, 114, 158, 0.30) 44px, transparent 44px),
+  repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(139, 128, 149, 0.13) 31px, rgba(139, 128, 149, 0.13) 32px);
+}
+.marginalia-hermes { fill: var(--hermes); }
+
+.ledger {
+  width: 264px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--rule); background: var(--page-deep); padding: 14px; overflow-y: auto;
+}
+.ledger h2 { font-family: var(--display); font-size: 16px; font-weight: 400; margin: 4px 0 9px; }
+.ledger h2 + .ledger-list { margin-bottom: 14px; }
+.ledger-list { display: flex; flex-direction: column; gap: 8px; }
+.habit-row, .goal-row {
+  background: var(--page); border: 1px solid var(--rule); border-left: 3px solid var(--hermes);
+  border-radius: 0 8px 8px 0; padding: 8px 10px;
+}
+.habit-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.habit-name { font-size: 13.5px; font-weight: 600; min-width: 0; }
+.habit-check {
+  flex: none; width: 26px; height: 26px; padding: 0; border-radius: 999px;
+  border: 1.5px solid var(--rule); color: var(--soft); font-size: 13px; line-height: 1;
+}
+.habit-check:hover { border-color: var(--hermes); color: var(--hermes); }
+.habit-done { background: var(--hermes); border-color: var(--hermes); color: #fff; }
+.habit-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--soft); margin-top: 5px; }
+.habit-dots { display: inline-flex; gap: 3px; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: transparent; border: 1px solid var(--rule); display: inline-block;
+}
+.dot-on { background: var(--hermes); border-color: var(--hermes); }
+.goal-top {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px; width: 100%;
+  background: none; border: none; box-shadow: none; padding: 0; text-align: left;
+}
+.goal-pct { font-size: 12px; color: var(--hermes); font-weight: 700; flex: none; }
+.goal-bar {
+  height: 6px; border-radius: 999px; background: rgba(70, 114, 158, 0.15);
+  margin: 6px 0 4px; overflow: hidden;
+}
+.goal-bar i { display: block; height: 100%; background: var(--hermes); border-radius: 999px; transition: width 300ms ease; }
+.goal-log { margin-top: 7px; }
+.goal-log input {
+  flex: 1; min-width: 0; font: inherit; font-size: 12.5px; color: var(--ink);
+  background: #fffdf8; border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px;
+}
+.goal-log button { font-size: 12px; padding: 5px 10px; }
+
+/* ── Hestia: the hearth ── */
+.hestia { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.hestia-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 13px 20px; border-bottom: 1px solid var(--rule); background: var(--page-deep);
+}
+.hestia-head h1 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--hestia); }
+.hestia-body { flex: 1; display: flex; min-height: 0; }
+.hestia-scroll { background:
+  linear-gradient(to right, transparent 43px, rgba(194, 84, 80, 0.30) 43px, rgba(194, 84, 80, 0.30) 44px, transparent 44px),
+  repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(139, 128, 149, 0.13) 31px, rgba(139, 128, 149, 0.13) 32px);
+}
+.marginalia-hestia { fill: var(--hestia); }
+
+.energy-quick { align-items: center; }
+.energy-label { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); margin-right: 2px; }
+.energy-btn { width: 28px; height: 28px; padding: 0; border-radius: 999px; font-size: 12.5px; }
+.energy-btn:hover { border-color: var(--hestia); color: var(--hestia); }
+.energy-on { background: var(--hestia); border-color: var(--hestia); color: #fff; }
+
+.hearth {
+  width: 264px; flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--rule); background: var(--page-deep); padding: 14px; overflow-y: auto;
+}
+.hearth h2 { font-family: var(--display); font-size: 16px; font-weight: 400; margin: 10px 0 8px; }
+.hearth h2:first-child { margin-top: 0; }
+.macro { margin-bottom: 8px; }
+.macro-top { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink); }
+.macro-nums { color: var(--soft); font-variant-numeric: tabular-nums; }
+.macro-bar { background: rgba(194, 84, 80, 0.14); margin: 4px 0 0; }
+.macro-bar i { background: var(--hestia); }
+.est-note { font-size: 11px; color: var(--soft); font-style: italic; margin: 6px 0 2px; }
+.meal-row {
+  display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+  background: var(--page); border: 1px solid var(--rule); border-left: 3px solid var(--hestia);
+  border-radius: 0 8px 8px 0; padding: 6px 10px; font-size: 12.5px;
+}
+.meal-desc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meal-cal { flex: none; color: var(--soft); font-variant-numeric: tabular-nums; }
+
+/* ── Usage meter ── */
+.usage-line { font-size: 13.5px; color: var(--ink); line-height: 1.6; }
+.usage-fine { font-size: 11px; color: var(--soft); font-style: italic; margin-top: 6px; }

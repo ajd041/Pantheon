@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, Settings, UsageBucket } from '../lib/ipc'
+import { APP_VERSION } from '../lib/version'
 
 export default function SettingsModal(props: { onClose: () => void }) {
   const [s, setS] = useState<Settings | null>(null)
@@ -41,7 +42,7 @@ export default function SettingsModal(props: { onClose: () => void }) {
   return (
     <div className="modal-veil" onClick={props.onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Settings</h2>
+        <h2>Settings <span className="version-tag">v{APP_VERSION}</span></h2>
 
         <label>Your name<input value={s.userName} onChange={set('userName')} placeholder="How Zeus should address you" /></label>
         <label>Anthropic API key<input value={s.anthropicApiKey} onChange={set('anthropicApiKey')} placeholder="sk-ant-…" type="password" /></label>

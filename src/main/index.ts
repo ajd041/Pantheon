@@ -10,7 +10,7 @@ function createWindow(): void {
     minHeight: 560,
     title: 'Pantheon',
     icon: path.join(__dirname, '../../build/icon.png'),
-    backgroundColor: '#F1E3D3',
+    backgroundColor: '#EDE4D6',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -24,7 +24,8 @@ export function getDb(): Database.Database {
     "ALTER TABLE meals ADD COLUMN protein_g REAL",
     "ALTER TABLE meals ADD COLUMN carbs_g REAL",
     "ALTER TABLE meals ADD COLUMN fat_g REAL",
-    "ALTER TABLE meals ADD COLUMN estimated INTEGER DEFAULT 0"
+    "ALTER TABLE meals ADD COLUMN estimated INTEGER DEFAULT 0",
+    "ALTER TABLE tasks ADD COLUMN gcal_event_id TEXT"
   ]) {
     try { db.exec(m) } catch { /* column already exists */ }
   }

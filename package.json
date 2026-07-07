@@ -1,6 +1,6 @@
 {
   "name": "pantheon",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A multi-agent personal assistant suite: one orchestrator, four domain gods.",
   "main": "./out/main/index.js",
   "author": "you",

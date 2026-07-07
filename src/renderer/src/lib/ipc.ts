@@ -49,6 +49,7 @@ export interface CalEvent {
   start: string
   end: string
   location?: string
+  pantheonTask?: string
 }
 
 export interface HabitOverview {
@@ -117,6 +118,9 @@ declare global {
       chronosUpdateTask(id: number, patch: Partial<Task>): Promise<{ ok: boolean }>
       chronosEvents(timeMin: string, timeMax: string): Promise<{ events: CalEvent[]; error?: string }>
       chronosArchive(): Promise<Pick<Task, 'id' | 'title' | 'expected_minutes' | 'actual_minutes' | 'category' | 'completed_at'>[]>
+      chronosCreateEvent(input: { summary: string; startISO: string; endISO: string }): Promise<{ ok: boolean; error?: string }>
+      chronosMoveEvent(eventId: string, startISO: string, endISO: string): Promise<{ ok: boolean; error?: string }>
+      chronosDeleteEvent(eventId: string): Promise<{ ok: boolean; error?: string }>
       chronosChat(message: string): Promise<{ text: string }>
       chronosChatHistory(): Promise<{ role: 'user' | 'assistant'; content: string }[]>
       chronosDeleteTask(id: number): Promise<{ ok: boolean }>

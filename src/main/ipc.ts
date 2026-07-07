@@ -10,6 +10,7 @@ import { loadSettings, saveSettings } from './settings'
 import { getDb } from './db'
 import * as gcal from './integrations/googleCalendar'
 import { usageSummary } from './usage'
+import { syncTaskCalendar, removeTaskEvent } from './taskSync'
 
 let orchestrator: Orchestrator | null = null
 let chronosChat: GodChat | null = null
@@ -212,11 +213,39 @@ export function registerIpc(win: BrowserWindow): void {
     ).all()
   })
 
-  ipcMain.handle('chronos:deleteTask', (_evt, id: number) => {
+  ipcMain.handle('chronos:deleteTask', async (_evt, id: number) => {
     const db = getDb()
+    const row = db.prepare('SELECT gcal_event_id FROM tasks WHERE id = ?').get(id) as any
+    await removeTaskEvent(row?.gcal_event_id)
     db.prepare('DELETE FROM subtasks WHERE task_id = ?').run(id)
     db.prepare('DELETE FROM tasks WHERE id = ?').run(id)
     return { ok: true }
+  })
+
+  ipcMain.handle('chronos:createEvent', async (_evt, input: { summary: string; startISO: string; endISO: string }) => {
+    try {
+      return { ok: true, ...(await gcal.createEvent(input)) }
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? String(e) }
+    }
+  })
+
+  ipcMain.handle('chronos:moveEvent', async (_evt, eventId: string, startISO: string, endISO: string) => {
+    try {
+      await gcal.updateEvent(eventId, { startISO, endISO })
+      return { ok: true }
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? String(e) }
+    }
+  })
+
+  ipcMain.handle('chronos:deleteEvent', async (_evt, eventId: string) => {
+    try {
+      await gcal.deleteEvent(eventId)
+      return { ok: true }
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? String(e) }
+    }
   })
 
   ipcMain.handle('chronos:addSubtask', (_evt, taskId: number, title: string) => {
@@ -241,13 +270,16 @@ export function registerIpc(win: BrowserWindow): void {
     return { id: Number(r.lastInsertRowid) }
   })
 
-  ipcMain.handle('chronos:updateTask', (_evt, id: number, patch: Record<string, unknown>) => {
+  ipcMain.handle('chronos:updateTask', async (_evt, id: number, patch: Record<string, unknown>) => {
     const allowed = ['title', 'notes', 'due', 'quadrant', 'expected_minutes', 'actual_minutes', 'scheduled_start', 'category', 'done']
     const keys = Object.keys(patch).filter((k) => allowed.includes(k))
     if (keys.length === 0) return { ok: false }
     const sets = keys.map((k) => `${k} = ?`).join(', ')
     const extra = keys.includes('done') && patch.done ? ", completed_at = datetime('now')" : ''
     getDb().prepare(`UPDATE tasks SET ${sets}${extra} WHERE id = ?`).run(...keys.map((k) => patch[k] as any), id)
+    if (keys.some((k) => ['scheduled_start', 'expected_minutes', 'title', 'done'].includes(k))) {
+      await syncTaskCalendar(id)
+    }
     return { ok: true }
   })
 

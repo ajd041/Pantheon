@@ -1,4 +1,5 @@
 import { AgentTool } from './types'
+import { syncTaskCalendar, removeTaskEvent } from '../taskSync'
 import { getDb } from '../db'
 import * as gcal from '../integrations/googleCalendar'
 
@@ -169,7 +170,7 @@ export function chronosTools(): AgentTool[] {
         },
         required: ['title']
       },
-      run: (i) => {
+      run: async (i) => {
         const db = getDb()
         const r = db.prepare(
           'INSERT INTO tasks (title, notes, due, quadrant, expected_minutes, scheduled_start, category) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -179,6 +180,7 @@ export function chronosTools(): AgentTool[] {
           const ins = db.prepare('INSERT INTO subtasks (task_id, title, position) VALUES (?, ?, ?)')
           i.subtasks.forEach((t: string, idx: number) => ins.run(taskId, String(t), idx))
         }
+        if (i.scheduled_start) await syncTaskCalendar(taskId)
         return JSON.stringify({ id: taskId })
       }
     },
@@ -236,8 +238,10 @@ export function chronosTools(): AgentTool[] {
         properties: { id: { type: 'integer' } },
         required: ['id']
       },
-      run: (i) => {
+      run: async (i) => {
         const db = getDb()
+        const row = db.prepare('SELECT gcal_event_id FROM tasks WHERE id = ?').get(i.id) as any
+        await removeTaskEvent(row?.gcal_event_id)
         db.prepare('DELETE FROM subtasks WHERE task_id = ?').run(i.id)
         db.prepare('DELETE FROM tasks WHERE id = ?').run(i.id)
         return JSON.stringify({ ok: true })
@@ -260,13 +264,16 @@ export function chronosTools(): AgentTool[] {
         },
         required: ['id']
       },
-      run: ({ id, ...patch }) => {
+      run: async ({ id, ...patch }) => {
         const allowed = ['title', 'notes', 'due', 'quadrant', 'expected_minutes', 'scheduled_start', 'category', 'done']
         const keys = Object.keys(patch).filter((k) => allowed.includes(k))
         if (keys.length === 0) return 'Nothing to update'
         const sets = keys.map((k) => `${k} = ?`).join(', ')
         const extra = keys.includes('done') && patch.done ? ", completed_at = datetime('now')" : ''
         getDb().prepare(`UPDATE tasks SET ${sets}${extra} WHERE id = ?`).run(...keys.map((k) => patch[k]), id)
+        if (keys.some((k) => ['scheduled_start', 'expected_minutes', 'title', 'done'].includes(k))) {
+          await syncTaskCalendar(id)
+        }
         return JSON.stringify({ ok: true })
       }
     },
@@ -278,8 +285,9 @@ export function chronosTools(): AgentTool[] {
         properties: { id: { type: 'integer' } },
         required: ['id']
       },
-      run: (i) => {
+      run: async (i) => {
         getDb().prepare("UPDATE tasks SET done = 1, completed_at = datetime('now') WHERE id = ?").run(i.id)
+        await syncTaskCalendar(i.id)
         return JSON.stringify({ ok: true })
       }
     }

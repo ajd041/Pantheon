@@ -1,4 +1,5 @@
 import { AgentTool } from './types'
+import { syncTaskCalendar } from '../taskSync'
 import { getDb } from '../db'
 import type Database from 'better-sqlite3'
 
@@ -294,13 +295,16 @@ export function hermesTools(): AgentTool[] {
         },
         required: ['items']
       },
-      run: (i) => {
+      run: async (i) => {
         const ins = getDb().prepare(
           'INSERT INTO tasks (title, notes, due, expected_minutes, category, scheduled_start) VALUES (?, ?, ?, ?, ?, ?)'
         )
-        const ids = i.items.map((it: any) =>
-          Number(ins.run(it.title, (it.notes ?? '') + ' (seeded by Hermes)', it.due ?? null, it.expected_minutes ?? 30, it.category ?? 'habit', it.scheduled_start ?? null).lastInsertRowid)
-        )
+        const ids: number[] = []
+        for (const it of i.items) {
+          const id = Number(ins.run(it.title, (it.notes ?? '') + ' (seeded by Hermes)', it.due ?? null, it.expected_minutes ?? 30, it.category ?? 'habit', it.scheduled_start ?? null).lastInsertRowid)
+          ids.push(id)
+          if (it.scheduled_start) await syncTaskCalendar(id)
+        }
         return JSON.stringify({ ok: true, created: ids })
       }
     }

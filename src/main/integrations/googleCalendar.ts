@@ -86,12 +86,14 @@ export async function listEvents(timeMinISO: string, timeMaxISO: string) {
     summary: e.summary,
     start: e.start?.dateTime ?? e.start?.date,
     end: e.end?.dateTime ?? e.end?.date,
-    location: e.location ?? undefined
+    location: e.location ?? undefined,
+    pantheonTask: e.extendedProperties?.private?.pantheonTaskId ?? undefined
   }))
 }
 
 export async function createEvent(input: {
-  summary: string; startISO: string; endISO: string; description?: string; location?: string
+  summary: string; startISO: string; endISO: string; description?: string; location?: string;
+  privateProps?: Record<string, string>
 }) {
   const cal = google.calendar({ version: 'v3', auth: authedClient() })
   const res = await cal.events.insert({
@@ -101,7 +103,8 @@ export async function createEvent(input: {
       description: input.description,
       location: input.location,
       start: { dateTime: input.startISO },
-      end: { dateTime: input.endISO }
+      end: { dateTime: input.endISO },
+      extendedProperties: input.privateProps ? { private: input.privateProps } : undefined
     }
   })
   return { id: res.data.id, htmlLink: res.data.htmlLink }

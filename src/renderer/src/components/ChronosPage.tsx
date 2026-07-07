@@ -18,7 +18,7 @@ const STICKY: Record<string, string> = {
 }
 const stickyStyle = (t: { id: number; category: string }, done = false): React.CSSProperties => ({
   ['--sticky' as any]: done ? '#ECE9E1' : (STICKY[t.category] ?? '#F6EFD4'),
-  transform: `rotate(${((t.id % 5) - 2) * 0.7}deg)`
+  transform: `rotate(${((t.id % 3) - 1) * 0.5}deg)`
 })
 
 const RITUALS = [
@@ -48,10 +48,12 @@ function fmtElapsed(sec: number): string {
 
 interface Timer { taskId: number; startedAt: number; baseSec: number }
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
+interface QuickCreate { day: string; mins: number; title: string; duration: number }
 type ArchiveRow = Pick<Task, 'id' | 'title' | 'expected_minutes' | 'actual_minutes' | 'category' | 'completed_at'>
 
 export default function ChronosPage(props: { onAsk: (text: string) => void }) {
   const [date, setDate] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })
+  const [span, setSpan] = useState<1 | 3 | 7>(1)
   const [tasks, setTasks] = useState<Task[]>([])
   const [events, setEvents] = useState<CalEvent[]>([])
   const [calNote, setCalNote] = useState('')
@@ -67,19 +69,26 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
   const [chatDraft, setChatDraft] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
   const [archive, setArchive] = useState<ArchiveRow[] | null>(null)
+  const [qc, setQc] = useState<QuickCreate | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval>>()
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  const days = useMemo(() => Array.from({ length: span }, (_, i) => {
+    const d = new Date(date)
+    d.setDate(d.getDate() + i)
+    return d
+  }), [date, span])
 
   const reloadTasks = useCallback(() => { api().chronosTasks().then(setTasks) }, [])
   const reloadEvents = useCallback(() => {
     const from = new Date(date)
     const to = new Date(date)
-    to.setDate(from.getDate() + 1)
+    to.setDate(from.getDate() + span)
     api().chronosEvents(from.toISOString(), to.toISOString()).then((r) => {
       setEvents(r.events)
       setCalNote(r.error ? 'Calendar offline — showing tasks only.' : '')
     })
-  }, [date])
+  }, [date, span])
 
   useEffect(reloadTasks, [reloadTasks])
   useEffect(reloadEvents, [reloadEvents])
@@ -108,17 +117,22 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
     }
   }
 
-  const schedule = async (id: number, startMins: number, d: Date = date) => {
-    await api().chronosUpdateTask(id, { scheduled_start: localISO(d, startMins) })
-    reloadTasks()
+  const schedule = async (id: number, day: string, startMins: number) => {
+    await api().chronosUpdateTask(id, { scheduled_start: `${day}T${pad(Math.floor(startMins / 60))}:${pad(startMins % 60)}` })
+    reloadTasks(); reloadEvents()
   }
   const unschedule = async (id: number) => {
     await api().chronosUpdateTask(id, { scheduled_start: null })
-    reloadTasks()
+    reloadTasks(); reloadEvents()
   }
   const patchTask = async (id: number, patch: Partial<Task>) => {
     await api().chronosUpdateTask(id, patch)
-    reloadTasks()
+    reloadTasks(); reloadEvents()
+  }
+  const deleteTask = async (id: number) => {
+    await api().chronosDeleteTask(id)
+    if (openTask === id) setOpenTask(null)
+    reloadTasks(); reloadEvents()
   }
   const addTask = async () => {
     const title = newTitle.trim()
@@ -133,6 +147,27 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
     setSubDraft('')
     await api().chronosAddSubtask(taskId, t)
     reloadTasks()
+  }
+
+  const moveEvent = async (ev: CalEvent, day: string, startMins: number) => {
+    const durMin = Math.max(15, Math.round((new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60_000))
+    const start = new Date(`${day}T${pad(Math.floor(startMins / 60))}:${pad(startMins % 60)}`)
+    const end = new Date(start.getTime() + durMin * 60_000)
+    await api().chronosMoveEvent(ev.id, start.toISOString(), end.toISOString())
+    reloadEvents()
+  }
+  const deleteEvent = async (ev: CalEvent) => {
+    await api().chronosDeleteEvent(ev.id)
+    reloadEvents()
+  }
+  const createEvent = async () => {
+    if (!qc || !qc.title.trim()) { setQc(null); return }
+    const start = new Date(`${qc.day}T${pad(Math.floor(qc.mins / 60))}:${pad(qc.mins % 60)}`)
+    const end = new Date(start.getTime() + qc.duration * 60_000)
+    const r = await api().chronosCreateEvent({ summary: qc.title.trim(), startISO: start.toISOString(), endISO: end.toISOString() })
+    setQc(null)
+    if (!r.ok && r.error) setCalNote(r.error)
+    reloadEvents()
   }
 
   const timerTask = tasks.find((t) => t.id === timer?.taskId)
@@ -151,7 +186,7 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
     if (viaTimer && timer) patch.actual_minutes = Math.round(elapsedSec / 60)
     await api().chronosUpdateTask(id, patch)
     if (timer?.taskId === id) setTimer(null)
-    reloadTasks()
+    reloadTasks(); reloadEvents()
   }
 
   const categories = useMemo(() => {
@@ -168,18 +203,14 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
   const colProgress = open.filter((t) => t.actual_minutes > 0)
   const colDone = tasks.filter((t) => t.done && (filter === 'all' || t.category === filter))
 
-  const dayTasks = tasks.filter((t) => !t.done && t.scheduled_start?.slice(0, 10) === dateKey(date))
-  const dayEvents = useMemo(
-    () => events.filter((e) => new Date(e.start).toDateString() === date.toDateString()),
-    [events, date]
-  )
+  const realEvents = useMemo(() => events.filter((e) => !e.pantheonTask), [events])
 
   const nextFreeHalfHour = (): number => {
     const now = new Date()
     let m = Math.max(DAY_START * 60, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30)
-    const today = new Date(); today.setHours(0, 0, 0, 0)
     const busy = [
-      ...dayEvents.map((e) => [minsInDay(e.start), minsInDay(e.end)]),
+      ...realEvents.filter((e) => new Date(e.start).toDateString() === new Date().toDateString())
+        .map((e) => [minsInDay(e.start), minsInDay(e.end)]),
       ...tasks.filter((t) => !t.done && t.scheduled_start?.slice(0, 10) === todayKey)
         .map((t) => [minsInDay(t.scheduled_start!), minsInDay(t.scheduled_start!) + t.expected_minutes])
     ]
@@ -187,23 +218,116 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
     return Math.min(m, DAY_END * 60 - 30)
   }
 
-  const dragId = (e: React.DragEvent) => Number(e.dataTransfer.getData('text/plain'))
   const allowDrop = (e: React.DragEvent) => e.preventDefault()
+  const onDropSlot = (e: React.DragEvent, day: string, mins: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const payload = e.dataTransfer.getData('text/plain')
+    if (payload.startsWith('t:')) {
+      schedule(Number(payload.slice(2)), day, mins)
+    } else if (payload.startsWith('e:')) {
+      const ev = events.find((x) => x.id === payload.slice(2))
+      if (ev) moveEvent(ev, day, mins)
+    }
+  }
+  const onDropTaskZone = (e: React.DragEvent, action: 'unschedule' | 'today' | 'done') => {
+    const payload = e.dataTransfer.getData('text/plain')
+    if (!payload.startsWith('t:')) return
+    const id = Number(payload.slice(2))
+    if (action === 'unschedule') unschedule(id)
+    if (action === 'today') schedule(id, todayKey, nextFreeHalfHour())
+    if (action === 'done') finishTask(id, false)
+  }
 
-  const shiftDate = (days: number) => {
+  const shiftDate = (dir: number) => {
     const d = new Date(date)
-    d.setDate(d.getDate() + days)
+    d.setDate(d.getDate() + dir * span)
     setDate(d)
   }
 
   const slots = Array.from({ length: DAY_MIN / 30 }, (_, i) => DAY_START * 60 + i * 30)
+
+  const renderDay = (d: Date, showLabels: boolean) => {
+    const key = dateKey(d)
+    const dayEvents = realEvents.filter((e) => new Date(e.start).toDateString() === d.toDateString())
+    const dayTasks = tasks.filter((t) => !t.done && t.scheduled_start?.slice(0, 10) === key)
+    return (
+      <div key={key} className="day-col">
+        {span > 1 && (
+          <button className="day-col-head" onClick={() => { setDate(new Date(d)); setSpan(1) }}>
+            {d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}
+          </button>
+        )}
+        <div className={`timeline ${showLabels ? '' : 'timeline-bare'}`} style={{ height: DAY_MIN * PX_PER_MIN }}>
+          {slots.map((m) => (
+            <div key={m} className="slot"
+              style={{ top: (m - DAY_START * 60) * PX_PER_MIN, height: 30 * PX_PER_MIN }}
+              onDragOver={allowDrop}
+              onDrop={(e) => onDropSlot(e, key, m)}
+              onClick={() => setQc({ day: key, mins: m, title: '', duration: 30 })}>
+              {showLabels && m % 60 === 0 && <span className="slot-time">{fmtClock(m)}</span>}
+            </div>
+          ))}
+          {dayEvents.map((ev) => {
+            const start = minsInDay(ev.start)
+            const len = Math.max(20, minsInDay(ev.end) - start)
+            return (
+              <div key={ev.id} draggable className="block block-event"
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', `e:${ev.id}`)}
+                onClick={(e) => e.stopPropagation()}
+                style={{ top: (start - DAY_START * 60) * PX_PER_MIN, height: len * PX_PER_MIN }}>
+                <span className="block-title">{ev.summary}</span>
+                <span className="block-sub">{fmtClock(start)}</span>
+                <span className="block-actions">
+                  <button className="mini" title="Delete event"
+                    onClick={(e) => { e.stopPropagation(); deleteEvent(ev) }}>✕</button>
+                </span>
+              </div>
+            )
+          })}
+          {dayTasks.map((t) => {
+            const start = minsInDay(t.scheduled_start!)
+            return (
+              <div key={t.id} draggable className="block block-task"
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', `t:${t.id}`)}
+                onClick={(e) => e.stopPropagation()}
+                style={{ top: (start - DAY_START * 60) * PX_PER_MIN, height: Math.max(22, t.expected_minutes * PX_PER_MIN) }}>
+                <span className="block-title">{t.title}</span>
+                <span className="block-actions">
+                  {timer?.taskId !== t.id && <button className="mini" onClick={() => startTimer(t)} title="Start stopwatch">▶</button>}
+                  <button className="mini" onClick={() => finishTask(t.id, false)} title="Mark done">✓</button>
+                  <button className="mini" onClick={() => unschedule(t.id)} title="Back to list">↩</button>
+                </span>
+              </div>
+            )
+          })}
+          {qc && qc.day === key && (
+            <div className="qc" style={{ top: (qc.mins - DAY_START * 60) * PX_PER_MIN }}
+              onClick={(e) => e.stopPropagation()}>
+              <span className="qc-time">{fmtClock(qc.mins)}</span>
+              <input autoFocus value={qc.title} placeholder="New event…"
+                onChange={(e) => setQc({ ...qc, title: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') createEvent(); if (e.key === 'Escape') setQc(null) }} />
+              <select value={qc.duration} onChange={(e) => setQc({ ...qc, duration: Number(e.target.value) })} aria-label="Duration">
+                {[15, 30, 45, 60, 90, 120].map((m) => <option key={m} value={m}>{m}m</option>)}
+              </select>
+              <button className="mini" onClick={createEvent}>Add</button>
+              <button className="mini" onClick={() => setQc(null)}>✕</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   const card = (t: Task, chip?: string) => {
     const isOpen = openTask === t.id
     const subDone = t.subtasks.filter((s) => s.done).length
     return (
       <div key={t.id} className="task-card" draggable={!isOpen} style={stickyStyle(t)}
-        onDragStart={(e) => e.dataTransfer.setData('text/plain', String(t.id))}>
+        onDragStart={(e) => e.dataTransfer.setData('text/plain', `t:${t.id}`)}>
+        <button className="card-x" title="Delete task"
+          onClick={(e) => { e.stopPropagation(); deleteTask(t.id) }}>✕</button>
         <div className="task-top" onClick={() => { setOpenTask(isOpen ? null : t.id); setSubDraft('') }}>
           <button className="mini check-btn" title="Mark complete"
             onClick={(e) => { e.stopPropagation(); finishTask(t.id, false) }}>✓</button>
@@ -253,7 +377,6 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
             <div className="row task-edit-row">
               {timer?.taskId !== t.id && t.scheduled_start && <button onClick={() => startTimer(t)}>▶ Track</button>}
               {t.scheduled_start && <button onClick={() => unschedule(t.id)}>Unschedule</button>}
-              <button className="danger" onClick={async () => { await api().chronosDeleteTask(t.id); setOpenTask(null); reloadTasks() }}>Delete</button>
             </div>
           </div>
         )}
@@ -267,7 +390,9 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
         <div className="row">
           <h1>Chronos</h1>
           <span className="chronos-date">
-            {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            {span === 1
+              ? date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+              : `${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
           </span>
         </div>
         <div className="row">
@@ -276,9 +401,14 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
           ))}
         </div>
         <div className="row">
-          <button onClick={() => shiftDate(-1)} aria-label="Previous day">‹</button>
+          <button onClick={() => shiftDate(-1)} aria-label="Previous">‹</button>
           <button onClick={() => { const d = new Date(); d.setHours(0, 0, 0, 0); setDate(d) }}>Today</button>
-          <button onClick={() => shiftDate(1)} aria-label="Next day">›</button>
+          <button onClick={() => shiftDate(1)} aria-label="Next">›</button>
+          {( [1, 3, 7] as const ).map((n) => (
+            <button key={n} className={span === n ? 'seg seg-on' : 'seg'} onClick={() => { setSpan(n); setQc(null) }}>
+              {n === 1 ? 'Day' : n === 3 ? '3 Days' : 'Week'}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -306,115 +436,83 @@ export default function ChronosPage(props: { onAsk: (text: string) => void }) {
       {calNote && <p className="cal-note">{calNote}</p>}
 
       <div className="chronos-body">
-        <div className="agenda">
-          <div className="timeline" style={{ height: DAY_MIN * PX_PER_MIN }}>
-            {slots.map((m) => (
-              <div key={m} className="slot"
-                style={{ top: (m - DAY_START * 60) * PX_PER_MIN, height: 30 * PX_PER_MIN }}
-                onDragOver={allowDrop}
-                onDrop={(e) => { const id = dragId(e); if (id) schedule(id, m) }}>
-                {m % 60 === 0 && <span className="slot-time">{fmtClock(m)}</span>}
-              </div>
-            ))}
-            {dayEvents.map((ev) => {
-              const start = minsInDay(ev.start)
-              const len = Math.max(20, minsInDay(ev.end) - start)
-              return (
-                <div key={ev.id} className="block block-event"
-                  style={{ top: (start - DAY_START * 60) * PX_PER_MIN, height: len * PX_PER_MIN }}>
-                  <span className="block-title">{ev.summary}</span>
-                </div>
-              )
-            })}
-            {dayTasks.map((t) => {
-              const start = minsInDay(t.scheduled_start!)
-              return (
-                <div key={t.id} draggable className="block block-task"
-                  onDragStart={(e) => e.dataTransfer.setData('text/plain', String(t.id))}
-                  style={{ top: (start - DAY_START * 60) * PX_PER_MIN, height: Math.max(22, t.expected_minutes * PX_PER_MIN) }}>
-                  <span className="block-title">{t.title}</span>
-                  <span className="block-actions">
-                    {timer?.taskId !== t.id && <button className="mini" onClick={() => startTimer(t)} title="Start stopwatch">▶</button>}
-                    <button className="mini" onClick={() => finishTask(t.id, false)} title="Mark done">✓</button>
-                  </span>
-                </div>
-              )
-            })}
+        <div className={`agenda ${span > 1 ? 'agenda-wide' : ''}`}>
+          <div className="agenda-days">
+            {days.map((d, i) => renderDay(d, i === 0))}
           </div>
         </div>
 
-        <div className="kanban">
-          <div className="kanban-tools">
-            <div className="backlog-add row">
-              <input value={newTitle} placeholder="New task…" onChange={(e) => setNewTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTask()} />
-              <select value={newMins} onChange={(e) => setNewMins(Number(e.target.value))} aria-label="Expected minutes">
-                {[15, 30, 45, 60, 90, 120].map((m) => <option key={m} value={m}>{m}m</option>)}
-              </select>
-              <select value={newCat} onChange={(e) => setNewCat(e.target.value)} aria-label="Category">
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <button onClick={addTask}>Add</button>
-            </div>
-            <div className="cat-filter">
-              {['all', ...categories].map((c) => (
-                <button key={c} className={`cat-chip ${filter === c ? 'cat-on' : ''}`} onClick={() => setFilter(c)}>{c}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="kanban-cols">
-            <section className="kcol" onDragOver={allowDrop}
-              onDrop={(e) => { const id = dragId(e); if (id) unschedule(id) }}>
-              <h2>Backlog <span className="kcount">{colBacklog.length}</span></h2>
-              <div className="kcol-list">
-                {colBacklog.map((t) => card(t))}
-                {colLater.length > 0 && <div className="klater">scheduled later</div>}
-                {colLater.map((t) => card(t, t.scheduled_start!.slice(5, 10)))}
+        {span === 1 && (
+          <div className="kanban">
+            <div className="kanban-tools">
+              <div className="backlog-add row">
+                <input value={newTitle} placeholder="New task…" onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addTask()} />
+                <select value={newMins} onChange={(e) => setNewMins(Number(e.target.value))} aria-label="Expected minutes">
+                  {[15, 30, 45, 60, 90, 120].map((m) => <option key={m} value={m}>{m}m</option>)}
+                </select>
+                <select value={newCat} onChange={(e) => setNewCat(e.target.value)} aria-label="Category">
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button onClick={addTask}>Add</button>
               </div>
-            </section>
-
-            <section className="kcol" onDragOver={allowDrop}
-              onDrop={(e) => { const id = dragId(e); if (id) schedule(id, nextFreeHalfHour(), new Date()) }}>
-              <h2>To-Do <span className="kcount">{colTodo.length}</span></h2>
-              <div className="kcol-list">
-                {colTodo.map((t) => card(t, fmtClock(minsInDay(t.scheduled_start!))))}
-                {colTodo.length === 0 && <p className="kempty">Drop a task here to put it on today.</p>}
-              </div>
-            </section>
-
-            <section className="kcol">
-              <h2>In-Progress <span className="kcount">{colProgress.length}</span></h2>
-              <div className="kcol-list">
-                {colProgress.map((t) => card(t, t.scheduled_start
-                  ? (t.scheduled_start.slice(0, 10) === todayKey ? fmtClock(minsInDay(t.scheduled_start)) : t.scheduled_start.slice(5, 10))
-                  : undefined))}
-              </div>
-            </section>
-
-            <section className="kcol kcol-done" onDragOver={allowDrop}
-              onDrop={(e) => { const id = dragId(e); if (id) finishTask(id, false) }}>
-              <h2>Completed <span className="kcount">{colDone.length}</span>
-                <button className="archive-link" onClick={() => api().chronosArchive().then(setArchive)}>archive</button>
-              </h2>
-              <div className="kcol-list">
-                {colDone.map((t) => (
-                  <div key={t.id} className="task-card task-done-card" style={stickyStyle(t, true)}>
-                    <div className="task-top">
-                      <span className="task-title">{t.title}</span>
-                      <button className="mini" title="Reopen" onClick={() => patchTask(t.id, { done: 0 })}>↺</button>
-                    </div>
-                    <div className="task-sub">
-                      {t.actual_minutes > 0 ? `${t.actual_minutes}m tracked · ` : ''}
-                      {t.completed_at && new Date(t.completed_at + 'Z').toLocaleDateString(undefined, { weekday: 'short' })}
-                    </div>
-                  </div>
+              <div className="cat-filter">
+                {['all', ...categories].map((c) => (
+                  <button key={c} className={`cat-chip ${filter === c ? 'cat-on' : ''}`} onClick={() => setFilter(c)}>{c}</button>
                 ))}
-                {colDone.length === 0 && <p className="kempty">Wins land here, then archive weekly.</p>}
               </div>
-            </section>
+            </div>
+
+            <div className="kanban-cols">
+              <section className="kcol" onDragOver={allowDrop} onDrop={(e) => onDropTaskZone(e, 'unschedule')}>
+                <h2>Backlog <span className="kcount">{colBacklog.length}</span></h2>
+                <div className="kcol-list">
+                  {colBacklog.map((t) => card(t))}
+                  {colLater.length > 0 && <div className="klater">scheduled later</div>}
+                  {colLater.map((t) => card(t, t.scheduled_start!.slice(5, 10)))}
+                </div>
+              </section>
+
+              <section className="kcol" onDragOver={allowDrop} onDrop={(e) => onDropTaskZone(e, 'today')}>
+                <h2>To-Do <span className="kcount">{colTodo.length}</span></h2>
+                <div className="kcol-list">
+                  {colTodo.map((t) => card(t, fmtClock(minsInDay(t.scheduled_start!))))}
+                  {colTodo.length === 0 && <p className="kempty">Drop a task here to put it on today.</p>}
+                </div>
+              </section>
+
+              <section className="kcol">
+                <h2>In-Progress <span className="kcount">{colProgress.length}</span></h2>
+                <div className="kcol-list">
+                  {colProgress.map((t) => card(t, t.scheduled_start
+                    ? (t.scheduled_start.slice(0, 10) === todayKey ? fmtClock(minsInDay(t.scheduled_start)) : t.scheduled_start.slice(5, 10))
+                    : undefined))}
+                </div>
+              </section>
+
+              <section className="kcol kcol-done" onDragOver={allowDrop} onDrop={(e) => onDropTaskZone(e, 'done')}>
+                <h2>Completed <span className="kcount">{colDone.length}</span>
+                  <button className="archive-link" onClick={() => api().chronosArchive().then(setArchive)}>archive</button>
+                </h2>
+                <div className="kcol-list">
+                  {colDone.map((t) => (
+                    <div key={t.id} className="task-card task-done-card" style={stickyStyle(t, true)}>
+                      <div className="task-top">
+                        <span className="task-title">{t.title}</span>
+                        <button className="mini" title="Reopen" onClick={() => patchTask(t.id, { done: 0 })}>↺</button>
+                      </div>
+                      <div className="task-sub">
+                        {t.actual_minutes > 0 ? `${t.actual_minutes}m tracked · ` : ''}
+                        {t.completed_at && new Date(t.completed_at + 'Z').toLocaleDateString(undefined, { weekday: 'short' })}
+                      </div>
+                    </div>
+                  ))}
+                  {colDone.length === 0 && <p className="kempty">Wins land here, then archive weekly.</p>}
+                </div>
+              </section>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {archive && (

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   actual_minutes INTEGER DEFAULT 0,
   scheduled_start TEXT,          -- local ISO datetime when time-blocked, else NULL
   category TEXT DEFAULT 'personal',  -- work | personal | errand | habit | anything
+  gcal_event_id TEXT,            -- mirrored Google Calendar event when time-blocked
   done INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   completed_at TEXT
